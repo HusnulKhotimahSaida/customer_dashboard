@@ -6,169 +6,118 @@ import matplotlib.pyplot as plt
 # KONFIGURASI HALAMAN
 # =========================
 st.set_page_config(
-    page_title="Customer Analysis Dashboard",
+    page_title="Customer Subscription & Churn Dashboard",
     layout="centered"
 )
 
+# =========================
+# JUDUL & DESKRIPSI
+# =========================
 st.title("📊 Customer Subscription & Churn Analysis")
+
 st.markdown("""
-Metode yang digunakan adalah **Random Forest (Ensemble Method)**.  
-Model dijalankan di **Google Colab**, sedangkan aplikasi ini berfungsi sebagai
-**dashboard visualisasi, simulasi, dan interpretasi hasil**.
+Aplikasi ini digunakan untuk **menampilkan hasil analisis data pelanggan** yang meliputi:
+
+- **Klasifikasi Subscription** (berlangganan / tidak berlangganan)
+- **Regresi Churn Risk** (tingkat risiko pelanggan berhenti berlangganan)
+
+Model yang digunakan adalah **Random Forest (Ensemble Method)**.  
+Proses pelatihan dan evaluasi model dilakukan di **Google Colab**, sedangkan aplikasi ini berfungsi sebagai **dashboard visualisasi hasil prediksi**.
 """)
 
 st.markdown("---")
 
 # =========================
-# TAB
+# UPLOAD CSV
 # =========================
-tab1, tab2 = st.tabs(["🟥 Klasifikasi", "🟦 Regresi"])
+uploaded_file = st.file_uploader(
+    "📂 Upload CSV hasil prediksi dari Google Colab",
+    type=["csv"]
+)
 
-# ======================================================
-# TAB 1 — KLASIFIKASI
-# ======================================================
-with tab1:
-    st.header("Klasifikasi Subscription")
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
 
-    mode_klas = st.radio(
-        "Pilih metode input:",
-        ["✍️ Input Manual", "📂 Upload CSV"],
-        key="mode_klas"
+    # =========================
+    # TAMPIL DATA
+    # =========================
+    st.subheader("📄 Data Hasil Prediksi")
+    st.write(
+        "Tabel berikut menampilkan sebagian data pelanggan beserta "
+        "hasil prediksi klasifikasi dan regresi."
+    )
+    st.dataframe(df.head())
+
+    st.markdown("---")
+
+    # =========================
+    # KLASIFIKASI
+    # =========================
+    if "subscription_pred" in df.columns:
+        st.subheader("✅ Hasil Klasifikasi Subscription")
+
+        fig1, ax1 = plt.subplots()
+        df["subscription_pred"].value_counts().plot(
+            kind="bar",
+            ax=ax1
+        )
+        ax1.set_xlabel("Subscription (0 = Tidak, 1 = Ya)")
+        ax1.set_ylabel("Jumlah Pelanggan")
+        st.pyplot(fig1)
+
+        # INTERPRETASI KLASIFIKASI
+        st.info("""
+**Interpretasi Klasifikasi:**
+
+Grafik menunjukkan distribusi pelanggan yang diprediksi **berlangganan (1)** dan 
+**tidak berlangganan (0)**. Perbedaan jumlah pada masing-masing kelas menunjukkan 
+bagaimana model Random Forest mengelompokkan pelanggan berdasarkan karakteristiknya.  
+Nilai probabilitas (jika tersedia pada data) menunjukkan tingkat keyakinan model 
+terhadap hasil prediksi tersebut.
+""")
+
+    st.markdown("---")
+
+    # =========================
+    # REGRESI
+    # =========================
+    if "churn_risk_pred" in df.columns:
+        st.subheader("📈 Hasil Regresi Churn Risk")
+
+        fig2, ax2 = plt.subplots()
+        ax2.plot(df["churn_risk_pred"].values)
+        ax2.set_ylabel("Churn Risk")
+        ax2.set_xlabel("Index Data")
+        st.pyplot(fig2)
+
+        # INTERPRETASI REGRESI
+        st.info("""
+**Interpretasi Regresi:**
+
+Grafik menampilkan sebaran nilai **churn risk** untuk seluruh pelanggan.  
+Nilai churn risk menunjukkan tingkat risiko pelanggan untuk berhenti berlangganan,
+di mana nilai yang lebih tinggi menandakan risiko churn yang lebih besar.
+
+Kepadatan grafik disebabkan oleh jumlah data yang besar, sehingga visualisasi ini 
+digunakan untuk melihat pola dan variasi churn risk secara keseluruhan.  
+Model Random Forest dipilih karena mampu menangani hubungan non-linear dan 
+lebih robust terhadap outlier.
+""")
+
+    st.markdown("---")
+
+    # =========================
+    # DOWNLOAD
+    # =========================
+    st.download_button(
+        "⬇️ Download Data Hasil Prediksi",
+        df.to_csv(index=False),
+        file_name="hasil_prediksi.csv",
+        mime="text/csv"
     )
 
-    # ---------- INPUT MANUAL ----------
-    if mode_klas == "✍️ Input Manual":
-        st.subheader("Input Manual (Simulasi 1 Pelanggan)")
-
-        subscription_pred = st.selectbox(
-            "Prediksi Subscription",
-            [0, 1],
-            format_func=lambda x: "Tidak Berlangganan" if x == 0 else "Berlangganan"
-        )
-
-        subscription_prob = st.slider(
-            "Probabilitas Subscription",
-            0.0, 1.0, 0.5
-        )
-
-        st.markdown("### Hasil Klasifikasi")
-        if subscription_pred == 1:
-            st.success(
-                f"Pelanggan diprediksi **BERLANGGANAN** "
-                f"dengan probabilitas **{subscription_prob:.2f}**"
-            )
-        else:
-            st.warning(
-                f"Pelanggan diprediksi **TIDAK BERLANGGANAN** "
-                f"dengan probabilitas **{subscription_prob:.2f}**"
-            )
-
-        # Visualisasi probabilitas
-        fig, ax = plt.subplots()
-        ax.bar(["Tidak", "Ya"], [1 - subscription_prob, subscription_prob])
-        ax.set_ylabel("Probabilitas")
-        st.pyplot(fig)
-
-        st.info("""
-**Interpretasi:**
-Hasil klasifikasi menunjukkan status subscription pelanggan.
-Probabilitas menggambarkan tingkat keyakinan model terhadap prediksi.
-""")
-
-    # ---------- UPLOAD CSV ----------
-    else:
-        st.subheader("Upload CSV Hasil Prediksi")
-
-        file = st.file_uploader(
-            "Upload CSV hasil prediksi dari Google Colab",
-            type=["csv"],
-            key="csv_klasifikasi"
-        )
-
-        if file is not None:
-            df = pd.read_csv(file)
-            st.dataframe(df.head())
-
-            if "subscription_pred" in df.columns:
-                fig, ax = plt.subplots()
-                df["subscription_pred"].value_counts().plot(kind="bar", ax=ax)
-                ax.set_xlabel("Subscription (0 = Tidak, 1 = Ya)")
-                ax.set_ylabel("Jumlah Pelanggan")
-                st.pyplot(fig)
-
-                st.info("""
-**Interpretasi:**
-Grafik menunjukkan distribusi pelanggan yang diprediksi
-berlangganan dan tidak berlangganan berdasarkan model Random Forest.
-""")
-        else:
-            st.info("Silakan upload file CSV hasil prediksi.")
-
-# ======================================================
-# TAB 2 — REGRESI
-# ======================================================
-with tab2:
-    st.header("Regresi Churn Risk")
-
-    mode_reg = st.radio(
-        "Pilih metode input:",
-        ["✍️ Input Manual", "📂 Upload CSV"],
-        key="mode_reg"
+else:
+    st.info(
+        "Silakan upload file CSV hasil prediksi dari Google Colab "
+        "untuk melihat hasil analisis dan interpretasi."
     )
-
-    # ---------- INPUT MANUAL ----------
-    if mode_reg == "✍️ Input Manual":
-        st.subheader("Input Manual (Simulasi 1 Pelanggan)")
-
-        churn_risk = st.slider(
-            "Nilai Churn Risk",
-            0.0, 1.0, 0.3
-        )
-
-        st.markdown("### Hasil Regresi")
-        st.metric(
-            label="Churn Risk",
-            value=f"{churn_risk:.2f}"
-        )
-
-        fig, ax = plt.subplots()
-        ax.plot([churn_risk], marker="o")
-        ax.set_ylim(0, 1)
-        ax.set_ylabel("Churn Risk")
-        ax.set_xlabel("Index Data")
-        st.pyplot(fig)
-
-        st.info("""
-**Interpretasi:**
-Nilai churn risk menunjukkan tingkat risiko pelanggan berhenti berlangganan.
-Semakin mendekati 1, semakin tinggi risiko churn.
-""")
-
-    # ---------- UPLOAD CSV ----------
-    else:
-        st.subheader("Upload CSV Hasil Prediksi")
-
-        file = st.file_uploader(
-            "Upload CSV hasil prediksi dari Google Colab",
-            type=["csv"],
-            key="csv_regresi"
-        )
-
-        if file is not None:
-            df = pd.read_csv(file)
-            st.dataframe(df.head())
-
-            if "churn_risk_pred" in df.columns:
-                fig, ax = plt.subplots()
-                ax.plot(df["churn_risk_pred"].values)
-                ax.set_ylabel("Churn Risk")
-                ax.set_xlabel("Index Data")
-                st.pyplot(fig)
-
-                st.info("""
-**Interpretasi:**
-Grafik line plot digunakan untuk melihat sebaran dan kestabilan
-nilai churn risk pada seluruh data pelanggan.
-""")
-        else:
-            st.info("Silakan upload file CSV hasil prediksi.")
