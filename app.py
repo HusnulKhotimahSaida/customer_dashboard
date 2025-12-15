@@ -17,18 +17,28 @@ st.set_page_config(
 st.title("📊 Customer Subscription & Churn Prediction")
 
 st.markdown("""
-Aplikasi ini melakukan **prediksi secara langsung** menggunakan
-model **Random Forest** tanpa menyimpan model ke file `.pkl`.
+Aplikasi ini menggunakan **input data pelanggan secara manual**  
+dan melakukan **training serta prediksi langsung** menggunakan
+model **Random Forest**, **tanpa file `.pkl` dan tanpa file CSV**.
 
-Model akan **dilatih ulang setiap aplikasi dijalankan**.
+Pendekatan ini digunakan untuk **pembelajaran dan demonstrasi konsep ML**.
 """)
 
 st.markdown("---")
 
 # =========================
-# LOAD DATA TRAINING
+# DATA TRAINING (HARDCODE)
 # =========================
-df = pd.read_csv("data_pelanggan.csv")
+data = {
+    "age": [25, 30, 45, 35, 50, 28, 40, 60],
+    "income": [3000000, 5000000, 8000000, 6000000, 10000000, 4000000, 7000000, 12000000],
+    "credit_score": [600, 650, 720, 680, 750, 620, 700, 780],
+    "total_spent": [1000000, 2000000, 5000000, 3000000, 7000000, 1500000, 4000000, 9000000],
+    "subscription": [0, 1, 1, 1, 1, 0, 1, 1],
+    "churn_risk": [0.7, 0.4, 0.2, 0.3, 0.1, 0.6, 0.25, 0.05]
+}
+
+df = pd.DataFrame(data)
 
 features = ["age", "income", "credit_score", "total_spent"]
 
@@ -56,9 +66,9 @@ reg.fit(X_scaled, y_reg)
 # =========================
 st.subheader("✍️ Input Data Pelanggan")
 
-age = st.number_input("Umur", 0, 100, 30)
+age = st.number_input("Umur", min_value=0, max_value=100, value=30)
 income = st.number_input("Pendapatan", min_value=0.0, value=5000000.0)
-credit_score = st.number_input("Credit Score", 300, 900, 650)
+credit_score = st.number_input("Credit Score", min_value=300, max_value=900, value=650)
 total_spent = st.number_input("Total Pengeluaran", min_value=0.0, value=2000000.0)
 
 # =========================
