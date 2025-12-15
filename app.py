@@ -16,108 +16,112 @@ st.set_page_config(
 st.title("📊 Customer Subscription & Churn Analysis")
 
 st.markdown("""
-Aplikasi ini digunakan untuk **menampilkan hasil analisis data pelanggan** yang meliputi:
+Aplikasi ini digunakan untuk **memasukkan hasil prediksi pelanggan secara manual**
+dan menampilkan visualisasi:
 
-- **Klasifikasi Subscription** (berlangganan / tidak berlangganan)
-- **Regresi Churn Risk** (tingkat risiko pelanggan berhenti berlangganan)
+- **Klasifikasi Subscription** (0 = Tidak, 1 = Ya)
+- **Regresi Churn Risk** (nilai risiko churn)
 
-Model yang digunakan adalah **Random Forest (Ensemble Method)**.  
-Proses pelatihan dan evaluasi model dilakukan di **Google Colab**, sedangkan aplikasi ini berfungsi sebagai **dashboard visualisasi hasil prediksi**.
+Model **Random Forest** dilatih di **Google Colab**,  
+sedangkan aplikasi ini berfungsi sebagai **dashboard input & visualisasi hasil prediksi**.
 """)
 
 st.markdown("---")
 
 # =========================
-# UPLOAD CSV
+# INPUT MANUAL
 # =========================
-uploaded_file = st.file_uploader(
-    "📂 Upload CSV hasil prediksi dari Google Colab",
-    type=["csv"]
+st.subheader("✍️ Input Data Prediksi Manual")
+
+subscription_pred = st.selectbox(
+    "Prediksi Subscription",
+    options=[0, 1],
+    format_func=lambda x: "Tidak Berlangganan (0)" if x == 0 else "Berlangganan (1)"
 )
 
-if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
+churn_risk_pred = st.slider(
+    "Nilai Churn Risk",
+    min_value=0.0,
+    max_value=1.0,
+    value=0.3,
+    step=0.01
+)
 
-    # =========================
-    # TAMPIL DATA
-    # =========================
-    st.subheader("📄 Data Hasil Prediksi")
-    st.write(
-        "Tabel berikut menampilkan sebagian data pelanggan beserta "
-        "hasil prediksi klasifikasi dan regresi."
-    )
-    st.dataframe(df.head())
+# =========================
+# SIMPAN DATA KE DATAFRAME
+# =========================
+data = {
+    "subscription_pred": [subscription_pred],
+    "churn_risk_pred": [churn_risk_pred]
+}
 
-    st.markdown("---")
+df = pd.DataFrame(data)
 
-    # =========================
-    # KLASIFIKASI
-    # =========================
-    if "subscription_pred" in df.columns:
-        st.subheader("✅ Hasil Klasifikasi Subscription")
+st.markdown("---")
 
-        fig1, ax1 = plt.subplots()
-        df["subscription_pred"].value_counts().plot(
-            kind="bar",
-            ax=ax1
-        )
-        ax1.set_xlabel("Subscription (0 = Tidak, 1 = Ya)")
-        ax1.set_ylabel("Jumlah Pelanggan")
-        st.pyplot(fig1)
+# =========================
+# TAMPIL DATA
+# =========================
+st.subheader("📄 Data Prediksi")
+st.dataframe(df)
 
-        # INTERPRETASI KLASIFIKASI
-        st.info("""
+st.markdown("---")
+
+# =========================
+# VISUALISASI KLASIFIKASI
+# =========================
+st.subheader("✅ Hasil Klasifikasi Subscription")
+
+fig1, ax1 = plt.subplots()
+df["subscription_pred"].value_counts().plot(
+    kind="bar",
+    ax=ax1
+)
+ax1.set_xlabel("Subscription (0 = Tidak, 1 = Ya)")
+ax1.set_ylabel("Jumlah Data")
+st.pyplot(fig1)
+
+st.info("""
 **Interpretasi Klasifikasi:**
 
-Grafik menunjukkan distribusi pelanggan yang diprediksi **berlangganan (1)** dan 
-**tidak berlangganan (0)**. Perbedaan jumlah pada masing-masing kelas menunjukkan 
-bagaimana model Random Forest mengelompokkan pelanggan berdasarkan karakteristiknya.  
-Nilai probabilitas (jika tersedia pada data) menunjukkan tingkat keyakinan model 
-terhadap hasil prediksi tersebut.
+Nilai **0** menunjukkan pelanggan diprediksi **tidak berlangganan**,  
+sedangkan nilai **1** menunjukkan pelanggan diprediksi **berlangganan**.  
+
+Hasil ini merupakan keluaran model Random Forest berdasarkan karakteristik pelanggan
+yang sebelumnya dipelajari pada proses training di Google Colab.
 """)
 
-    st.markdown("---")
+st.markdown("---")
 
-    # =========================
-    # REGRESI
-    # =========================
-    if "churn_risk_pred" in df.columns:
-        st.subheader("📈 Hasil Regresi Churn Risk")
+# =========================
+# VISUALISASI REGRESI
+# =========================
+st.subheader("📈 Hasil Regresi Churn Risk")
 
-        fig2, ax2 = plt.subplots()
-        ax2.plot(df["churn_risk_pred"].values)
-        ax2.set_ylabel("Churn Risk")
-        ax2.set_xlabel("Index Data")
-        st.pyplot(fig2)
+fig2, ax2 = plt.subplots()
+ax2.plot(df["churn_risk_pred"], marker="o")
+ax2.set_ylabel("Churn Risk")
+ax2.set_xlabel("Data ke-")
+st.pyplot(fig2)
 
-        # INTERPRETASI REGRESI
-        st.info("""
+st.info("""
 **Interpretasi Regresi:**
 
-Grafik menampilkan sebaran nilai **churn risk** untuk seluruh pelanggan.  
-Nilai churn risk menunjukkan tingkat risiko pelanggan untuk berhenti berlangganan,
-di mana nilai yang lebih tinggi menandakan risiko churn yang lebih besar.
+Nilai **churn risk** menunjukkan tingkat risiko pelanggan untuk berhenti berlangganan.
+Semakin mendekati **1**, semakin tinggi risiko churn.
 
-Kepadatan grafik disebabkan oleh jumlah data yang besar, sehingga visualisasi ini 
-digunakan untuk melihat pola dan variasi churn risk secara keseluruhan.  
-Model Random Forest dipilih karena mampu menangani hubungan non-linear dan 
-lebih robust terhadap outlier.
+Model Random Forest digunakan karena mampu menangkap hubungan non-linear
+dan memberikan prediksi yang lebih stabil terhadap data pelanggan.
 """)
 
-    st.markdown("---")
+st.markdown("---")
 
-    # =========================
-    # DOWNLOAD
-    # =========================
-    st.download_button(
-        "⬇️ Download Data Hasil Prediksi",
-        df.to_csv(index=False),
-        file_name="hasil_prediksi.csv",
-        mime="text/csv"
-    )
-
-else:
-    st.info(
-        "Silakan upload file CSV hasil prediksi dari Google Colab "
-        "untuk melihat hasil analisis dan interpretasi."
-    )
+# =========================
+# DOWNLOAD
+# =========================
+st.download_button(
+    "⬇️ Download Data Prediksi",
+    df.to_csv(index=False),
+    file_name="hasil_prediksi_manual.csv",
+    mime="text/csv"
+)
