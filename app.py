@@ -1,127 +1,88 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.preprocessing import StandardScaler
 
 # =========================
 # KONFIGURASI HALAMAN
 # =========================
 st.set_page_config(
-    page_title="Customer Subscription & Churn Dashboard",
+    page_title="Customer Subscription & Churn Prediction",
     layout="centered"
 )
 
 # =========================
-# JUDUL & DESKRIPSI
+# JUDUL
 # =========================
-st.title("📊 Customer Subscription & Churn Analysis")
+st.title("📊 Customer Subscription & Churn Prediction")
 
 st.markdown("""
-Aplikasi ini digunakan untuk **memasukkan hasil prediksi pelanggan secara manual**
-dan menampilkan visualisasi:
+Aplikasi ini melakukan **prediksi secara langsung** menggunakan
+model **Random Forest** tanpa menyimpan model ke file `.pkl`.
 
-- **Klasifikasi Subscription** (0 = Tidak, 1 = Ya)
-- **Regresi Churn Risk** (nilai risiko churn)
-
-Model **Random Forest** dilatih di **Google Colab**,  
-sedangkan aplikasi ini berfungsi sebagai **dashboard input & visualisasi hasil prediksi**.
+Model akan **dilatih ulang setiap aplikasi dijalankan**.
 """)
 
 st.markdown("---")
 
 # =========================
-# INPUT MANUAL
+# LOAD DATA TRAINING
 # =========================
-st.subheader("✍️ Input Data Prediksi Manual")
+df = pd.read_csv("data_pelanggan.csv")
 
-subscription_pred = st.selectbox(
-    "Prediksi Subscription",
-    options=[0, 1],
-    format_func=lambda x: "Tidak Berlangganan (0)" if x == 0 else "Berlangganan (1)"
-)
+features = ["age", "income", "credit_score", "total_spent"]
 
-churn_risk_pred = st.slider(
-    "Nilai Churn Risk",
-    min_value=0.0,
-    max_value=1.0,
-    value=0.3,
-    step=0.01
-)
+X = df[features]
+y_class = df["subscription"]
+y_reg = df["churn_risk"]
 
 # =========================
-# SIMPAN DATA KE DATAFRAME
+# SCALING
 # =========================
-data = {
-    "subscription_pred": [subscription_pred],
-    "churn_risk_pred": [churn_risk_pred]
-}
-
-df = pd.DataFrame(data)
-
-st.markdown("---")
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
 
 # =========================
-# TAMPIL DATA
+# TRAIN MODEL
 # =========================
-st.subheader("📄 Data Prediksi")
-st.dataframe(df)
+clf = RandomForestClassifier(random_state=42)
+clf.fit(X_scaled, y_class)
 
-st.markdown("---")
-
-# =========================
-# VISUALISASI KLASIFIKASI
-# =========================
-st.subheader("✅ Hasil Klasifikasi Subscription")
-
-fig1, ax1 = plt.subplots()
-df["subscription_pred"].value_counts().plot(
-    kind="bar",
-    ax=ax1
-)
-ax1.set_xlabel("Subscription (0 = Tidak, 1 = Ya)")
-ax1.set_ylabel("Jumlah Data")
-st.pyplot(fig1)
-
-st.info("""
-**Interpretasi Klasifikasi:**
-
-Nilai **0** menunjukkan pelanggan diprediksi **tidak berlangganan**,  
-sedangkan nilai **1** menunjukkan pelanggan diprediksi **berlangganan**.  
-
-Hasil ini merupakan keluaran model Random Forest berdasarkan karakteristik pelanggan
-yang sebelumnya dipelajari pada proses training di Google Colab.
-""")
-
-st.markdown("---")
+reg = RandomForestRegressor(random_state=42)
+reg.fit(X_scaled, y_reg)
 
 # =========================
-# VISUALISASI REGRESI
+# INPUT MANUAL USER
 # =========================
-st.subheader("📈 Hasil Regresi Churn Risk")
+st.subheader("✍️ Input Data Pelanggan")
 
-fig2, ax2 = plt.subplots()
-ax2.plot(df["churn_risk_pred"], marker="o")
-ax2.set_ylabel("Churn Risk")
-ax2.set_xlabel("Data ke-")
-st.pyplot(fig2)
-
-st.info("""
-**Interpretasi Regresi:**
-
-Nilai **churn risk** menunjukkan tingkat risiko pelanggan untuk berhenti berlangganan.
-Semakin mendekati **1**, semakin tinggi risiko churn.
-
-Model Random Forest digunakan karena mampu menangkap hubungan non-linear
-dan memberikan prediksi yang lebih stabil terhadap data pelanggan.
-""")
-
-st.markdown("---")
+age = st.number_input("Umur", 0, 100, 30)
+income = st.number_input("Pendapatan", min_value=0.0, value=5000000.0)
+credit_score = st.number_input("Credit Score", 300, 900, 650)
+total_spent = st.number_input("Total Pengeluaran", min_value=0.0, value=2000000.0)
 
 # =========================
-# DOWNLOAD
+# PREDIKSI
 # =========================
-st.download_button(
-    "⬇️ Download Data Prediksi",
-    df.to_csv(index=False),
-    file_name="hasil_prediksi_manual.csv",
-    mime="text/csv"
-)
+if st.button("🔍 Prediksi"):
+    input_df = pd.DataFrame(
+        [[age, income, credit_score, total_spent]],
+        columns=features
+    )
+
+    input_scaled = scaler.transform(input_df)
+
+    subscription_pred = clf.predict(input_scaled)[0]
+    churn_risk_pred = reg.predict(input_scaled)[0]
+
+    st.markdown("---")
+    st.subheader("📌 Hasil Prediksi")
+
+    st.write("**Status Subscription:**")
+    if subscription_pred == 1:
+        st.success("Berlangganan")
+    else:
+        st.warning("Tidak Berlangganan")
+
+    st.write("**Churn Risk:**")
+    st.info(f"{churn_risk_pred:.2f}")
